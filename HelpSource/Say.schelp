@@ -1,7 +1,7 @@
 TITLE:: Say
 summary:: speak text with OSX system voices
-categories:: Speech
-related:: Classes/SomeRelatedClass, Reference/SomeRelatedStuff
+categories:: Speech Synthesis
+related:: Classes/Speech
 
 DESCRIPTION::
 Say replaces the former OSX speech synthesis used in SuperCollider, Speech.
@@ -14,26 +14,30 @@ Say is a function of the operating system and not the server. Thus, it does not 
 code::
 // first of of, no need to preload voices
 // - it finds all installed ones
-Say.voices.printAll;
+Say.voices.printAll;"";
 
 // like Speech:
 "hi, this is the default voice speaking.".speak;
+"hi, this is the default voice speaking.".say;
+"hi, this is the first voice speaking.".say(0);
+"hi, this is Anna's voice speaking.".say("Anna");
 
 // each voice has a name, a language symbol, and an example text:
 Say.voices.first.postln.asString.speak;
 
 // new in Say - you can create events that will be converted to strings to speak:
-(type: \say, text: "hi there, i'm talking with the default voice now", cmds: "-r 200").play;
-(type: \say, text: "hi there, this is a random voice", voice: Say.voices.choose.name.postln).play;
-(type: \say, text: "Hallo, hier Anna aus Doytschland, oder Standard-stimme", voice: "Anna").play;
+(type: \say, text: "hi there, i'm talking with the default voice now").play;
+(type: \say, text: "this is a random voice", voice: Say.voices.choose.name.postln).play;
+(type: \say, text: "Anna aus Doytschland, oder Standard-stimme", voice: "Anna").play;
 
 // check whether you have a certain voice
 Say.isValidVoice("Anna");
 
-// events can wait with next bit of code until first one is finished:
+// events can wait with next bit of code until first one is finished
+// - Note that this blocks the interpreter while speaking!
 (
 "begin ...".postln;
-(type: \say, text: "hi there", wait: true, voice: "Xenophilia").play;
+(type: \say, text: "hi there", voice: "Xenophilia").play;
 "first one done.".postln;
 (type: \say, text: "ich spreche Toytch", wait: true, voice: "Anna").play;
 "... and now second one done.".postln;
@@ -45,8 +49,7 @@ Say.isValidVoice("Anna");
 "hi, this is the third voice in Say.voices speaking".speak(2, false);
 )
 
-
-// 'say' has a lot of usage options that can also be sripted from SC.
+// 'say' has a lot of usage options that can also be scripted from SC.
 // In the Terminal, enter 'man say' to read the say manual:
 "/Applications/Utilities/Terminal.app".openOS;
 
@@ -64,16 +67,15 @@ Say.isValidVoice("Anna");
 "~/Desktop/hithere5.aiff".openOS;
 )
 
-// Unfortunately the wait option blocks supercollider until done,
-// so if you have many voices installed, this example could take a while
-// before you can access the interpreter again:
+// Unfortunately the wait option blocks supercollider until say is done,
+// so this example could take a while before you can access the interpreter again:
 (
 Task {
 	Say.voices.keep(5).do { |dict, i|
 		dict.asString.speak(i, wait: true);
 		1.wait;
 	}
-}.play(AppClock);
+}.play;
 )
 ::
 
@@ -85,12 +87,7 @@ METHOD:: voices
 
 METHOD:: getVoices
 
+METHOD:: isValidVoice
+check whether a symbol is a valid voice name.
 
-INSTANCEMETHODS::
 
-
-EXAMPLES::
-
-code::
-_some_example_code_
-::

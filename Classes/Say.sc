@@ -29,6 +29,7 @@ Say {
 			str = str + quote(~text ? "");
 			str.postcs;
 			if (~wait == true) {
+				// could use Pipe.call, but that also blocks
 				unixCmdGetStdOut(str);
 			} {
 				unixCmd(str);
@@ -38,19 +39,26 @@ Say {
 }
 
 + String {
-	say { |index, wait = false, cmds|
+	say { |voiceOrIndex, wait = false, cmds|
 		var event = (\type: \say, wait: wait, text: this, cmds: cmds);
 		var voice;
-		index !? {
-			voice = Say.voices[index];
-			voice = voice !? { voice.name };
+
+		voiceOrIndex !? {
+			if (voiceOrIndex.isKindOf(Symbol)) {
+				voice = voiceOrIndex;
+			} {
+				if (voiceOrIndex.isKindOf(Integer)) {
+					voice = Say.voices[voiceOrIndex];
+					voice = voice !? { voice.name };
+				}
+			};
 			event.put(\voice, voice);
 		};
 		event.postcs.play;
 	}
 
 	// backwards compat
-	speak {  |index, wait = false, dict|
-		this.say(index, wait, dict);
+	speak {  |voiceOrIndex, wait = false, dict|
+		this.say(voiceOrIndex, wait, dict);
 	}
 }

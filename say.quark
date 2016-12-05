@@ -1,0 +1,9 @@
+(
+	\name: "say",
+	\path: "say",
+	\summary: "use speech synthesis 'say' on osx",
+	\author: "Alberto de Campo",
+	\version: 0.1,
+	\organization: "Institute for time-based media, UdK Berlin",
+	\since: "2016"
+)
