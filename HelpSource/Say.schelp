@@ -1,0 +1,96 @@
+TITLE:: Say
+summary:: speak text with OSX system voices
+categories:: Speech
+related:: Classes/SomeRelatedClass, Reference/SomeRelatedStuff
+
+DESCRIPTION::
+Say replaces the former OSX speech synthesis used in SuperCollider, Speech.
+Because the underlying commandline program, 'say', is quite different, it does not work
+as a straight replacement. Rather than badly reimplementing Speech, it allows full access
+to the power of the 'say' program, and offers a few of its options conveniently.
+
+Say is a function of the operating system and not the server. Thus, it does not generate sound on the server, and cannot be included as a sound source within other sound processes. However, one can patch system audio output to system input (by hardware of by software) and thus route Say-produced sound into the server for processing.
+
+code::
+// first of of, no need to preload voices
+// - it finds all installed ones
+Say.voices.printAll;
+
+// like Speech:
+"hi, this is the default voice speaking.".speak;
+
+// each voice has a name, a language symbol, and an example text:
+Say.voices.first.postln.asString.speak;
+
+// new in Say - you can create events that will be converted to strings to speak:
+(type: \say, text: "hi there, i'm talking with the default voice now", cmds: "-r 200").play;
+(type: \say, text: "hi there, this is a random voice", voice: Say.voices.choose.name.postln).play;
+(type: \say, text: "Hallo, hier Anna aus Doytschland, oder Standard-stimme", voice: "Anna").play;
+
+// check whether you have a certain voice
+Say.isValidVoice("Anna");
+
+// events can wait with next bit of code until first one is finished:
+(
+"begin ...".postln;
+(type: \say, text: "hi there", wait: true, voice: "Xenophilia").play;
+"first one done.".postln;
+(type: \say, text: "ich spreche Toytch", wait: true, voice: "Anna").play;
+"... and now second one done.".postln;
+)
+// access voices by number, and use wait
+(
+"hi, this is the first voice in Say.voices speaking".speak(0, true);
+"hi, this is the second voice in Say.voices speaking".speak(1, false);
+"hi, this is the third voice in Say.voices speaking".speak(2, false);
+)
+
+
+// 'say' has a lot of usage options that can also be sripted from SC.
+// In the Terminal, enter 'man say' to read the say manual:
+"/Applications/Utilities/Terminal.app".openOS;
+
+// the rate parameter can be given as an event entry:
+(type: \say, text: "hi there, i'm talking now", rate: 200).play;
+(type: \say, text: "hi there, i'm talking now", rate: 500).play;
+
+// or the same can be given as command string called 'cmds' :
+(type: \say, text: "hi there, i'm talking now", cmds: "-r 500").play;
+
+// other options include recording to a file:
+(
+(type: \say, text: "hi there, i'm talking now", wait: true, cmds: "-o ~/Desktop/hithere.aiff").play;
+// and we used wait: true so the next action happens when done
+"~/Desktop/hithere5.aiff".openOS;
+)
+
+// Unfortunately the wait option blocks supercollider until done,
+// so if you have many voices installed, this example could take a while
+// before you can access the interpreter again:
+(
+Task {
+	Say.voices.keep(5).do { |dict, i|
+		dict.asString.speak(i, wait: true);
+		1.wait;
+	}
+}.play(AppClock);
+)
+::
+
+CLASSMETHODS::
+
+METHOD:: addSayEvent
+
+METHOD:: voices
+
+METHOD:: getVoices
+
+
+INSTANCEMETHODS::
+
+
+EXAMPLES::
+
+code::
+_some_example_code_
+::
