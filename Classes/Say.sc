@@ -21,7 +21,7 @@ Say {
 
 	*addSayEvent {
 		Event.addEventType(\say, {
-			var str = "say";
+			var str = "say", cond;
 			if (this.isValidVoice(~voice)) { str = str + "-v" + ~voice };
 			// support rate flag - more flags could be supported here as well
 			~rate !? { str = str + "-r" + ~rate };
@@ -29,11 +29,21 @@ Say {
 			str = str + quote(~text ? "");
 			str.postcs;
 			if (~wait == true) {
-				// could use Pipe.call, but that also blocks
-				unixCmdGetStdOut(str);
+				if (thisThread.isKindOf(Routine)) {
+					cond = Condition.new;
+					unixCmd(str, {
+						cond.unhang;
+						~doneFunc.value;
+					});
+					cond.hang;
+				} {
+					// ugly wait by blocking ...
+					unixCmdGetStdOut(str);
+					~doneFunc.value;
+				};
 			} {
-				unixCmd(str);
-			};
+				unixCmd(str, ~doneFunc);
+			}
 		});
 	}
 }
@@ -62,3 +72,4 @@ Say {
 		this.say(voiceOrIndex, wait, dict);
 	}
 }
+

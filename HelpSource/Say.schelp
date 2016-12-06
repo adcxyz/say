@@ -22,6 +22,7 @@ Say.voices.printAll;"";
 "hi, this is the first voice speaking.".say(0);
 "hi, this is Anna's voice speaking.".say("Anna");
 
+
 // each voice has a name, a language symbol, and an example text:
 Say.voices.first.postln.asString.speak;
 
@@ -37,11 +38,27 @@ Say.isValidVoice("Anna");
 // - Note that this blocks the interpreter while speaking!
 (
 "begin ...".postln;
-(type: \say, text: "hi there", voice: "Xenophilia").play;
+(type: \say, text: "first sentence ... ", wait: true, ).play;
 "first one done.".postln;
-(type: \say, text: "ich spreche Toytch", wait: true, voice: "Anna").play;
+(type: \say, text: "then second sentence", wait: true).play;
 "... and now second one done.".postln;
 )
+
+// when this is within a Routine, it just works without blocking:
+(
+fork {
+	"begin ...".postln;
+	(type: \say, text: "first sentence ... ", wait: true, ).play;
+	"first one done.".postln;
+	(type: \say, text: "then second sentence", wait: true).play;
+	"... and now second one done.".postln;
+}
+)
+
+// You can also use a doneFunc to do something when a say event is finished:
+(type: \say, text: "hi there", doneFunc: { "done!".postcs }).play;
+
+
 // access voices by number, and use wait
 (
 "hi, this is the first voice in Say.voices speaking".speak(0, true);
@@ -77,17 +94,41 @@ Task {
 	}
 }.play;
 )
+// say is on average 30-40x faster than realtime (on a 2014 macbook pro),
+// so writing soundfiles and reading them into buffers may be fast enough
+// for some near realtime uses.
+Pbind(\note, 24, \dur, 0.5, \legato, 0.1).play
+(
+Task {
+	var time = Main.elapsedTime;
+	var delta, sfdur;
+	l = Say.voices.collect { |dict|
+		var filename = "~/Desktop/%.aiff".format(dict.name).standardizePath;
+
+		(type: \say, voice: dict.name, text: dict.exampleText,
+			cmds: "-o" + filename, wait:true).play;
+		delta = (Main.elapsedTime - time);
+
+		sfdur = SoundFile.openRead(filename).duration;
+		time = Main.elapsedTime;
+		[dict.name.asSymbol, sfdur, delta, sfdur / delta].round(0.001).postln;
+	};
+	l.mean.postln;
+}.play;
+)
 ::
 
 CLASSMETHODS::
 
-METHOD:: addSayEvent
-
 METHOD:: voices
-
-METHOD:: getVoices
+the list of installed voices
 
 METHOD:: isValidVoice
 check whether a symbol is a valid voice name.
 
+METHOD:: addSayEvent, getVoices
+used in initClass: adds an event type for say events,
+
+METHOD:: getVoices,
+used in initClass: gets the list of installed voices from the system.
 
