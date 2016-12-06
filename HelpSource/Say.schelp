@@ -126,9 +126,9 @@ the list of installed voices
 METHOD:: isValidVoice
 check whether a symbol is a valid voice name.
 
-METHOD:: addSayEvent, getVoices
+METHOD:: addSayEvent
 used in initClass: adds an event type for say events,
 
-METHOD:: getVoices,
+METHOD:: getVoices
 used in initClass: gets the list of installed voices from the system.
 
