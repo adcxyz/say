@@ -30,7 +30,7 @@ Say {
 			~rate !? { str = str + "-r" + ~rate };
 			~cmds !? { str = str + ~cmds };
 			str = str + quote(~text ? "");
-			str.postcs;
+			// str.postcs;
 			if (~wait == true) {
 				if (thisThread.isKindOf(Routine)) {
 					cond = Condition.new;
