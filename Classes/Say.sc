@@ -18,7 +18,8 @@ Say {
 	}
 
 	*isValidVoice { |name|
-		^Say.voices.any { |dict| dict.name == name.asString }
+		name = name.asString;
+		^Say.voices.any { |dict| dict.name == name }
 	}
 
 	*addSayEvent {
@@ -60,8 +61,8 @@ Say {
 			or: voiceOrIndex.isKindOf(String)) {
 				voice = voiceOrIndex.asString;
 			} {
-				if (voiceOrIndex.isKindOf(Integer)) {
-					voice = Say.voices[voiceOrIndex];
+				if (voiceOrIndex.isKindOf(SimpleNumber)) {
+					voice = Say.voices[voiceOrIndex.asInteger];									voice = Say.voices[voiceOrIndex];
 					voice = voice !? { voice.name };
 				}
 			};
