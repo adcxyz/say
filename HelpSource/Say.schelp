@@ -89,7 +89,16 @@ fork {
 (
 Task {
 	Say.voices.keep(5).do { |dict, i|
-		dict.asString.speak(i, wait: true);
+		dict.exampleText.asString.speak(i, wait: true);
+		1.wait;
+	}
+}.play;
+)
+
+(
+Task {
+	Say.voices.do { |dict, i|
+		dict.exampleText.asString.speak(i);
 		1.wait;
 	}
 }.play;

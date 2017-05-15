@@ -17,7 +17,9 @@ Say {
 		};
 	}
 
-	*isValidVoice { |name| ^Say.voices.any { |dict| dict.name == name } }
+	*isValidVoice { |name|
+		^Say.voices.any { |dict| dict.name == name.asString }
+	}
 
 	*addSayEvent {
 		Event.addEventType(\say, {
