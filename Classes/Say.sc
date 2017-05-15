@@ -56,8 +56,9 @@ Say {
 		var voice;
 
 		voiceOrIndex !? {
-			if (voiceOrIndex.isKindOf(Symbol)) {
-				voice = voiceOrIndex;
+			if (voiceOrIndex.isKindOf(Symbol)
+			or: voiceOrIndex.isKindOf(String)) {
+				voice = voiceOrIndex.asString;
 			} {
 				if (voiceOrIndex.isKindOf(Integer)) {
 					voice = Say.voices[voiceOrIndex];
@@ -66,7 +67,7 @@ Say {
 			};
 			event.put(\voice, voice);
 		};
-		event.postcs.play;
+		event.play;
 	}
 
 	// backwards compat
