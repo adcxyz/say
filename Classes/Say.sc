@@ -4,8 +4,14 @@ Say {
 	classvar <fxVoices, <fxVoiceNames;
 
 	*initClass {
-		this.getVoices;
-		this.addSayEvent;
+		Platform.case(\osx,
+			{
+				Say.getVoices;
+				Say.addSayEvent;
+			}, {
+				"The Quark 'say' is currently only available on osx.".postln
+			}
+		);
 	}
 
 	*getVoices {
@@ -37,8 +43,17 @@ Say {
 	}
 
 	*isValidVoice { |name|
-		name = name.asString;
-		^Say.voices.any { |dict| dict.name == name }
+		^allVoiceNames.includesEqual(name.asString);
+	}
+
+	*at { |name|
+		^allVoices.detect { |voice| voice.name == name }
+	}
+
+	*voicesByLang { |langSymbol, argVoices|
+		^(argVoices ? voices ? allVoices).select { |dict|
+			dict.langSymbol.asString.beginsWith(langSymbol.asString)
+		}
 	}
 
 	*addSayEvent {
