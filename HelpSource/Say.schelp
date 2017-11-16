@@ -6,50 +6,118 @@ related:: Classes/Speech
 DESCRIPTION::
 Say replaces the former OSX speech synthesis used in SuperCollider, Speech.
 Because the underlying commandline program, 'say', is quite different, it does not work
-as a straight replacement. Rather than badly reimplementing Speech, it allows full access
-to the power of the 'say' program, and offers a few of its options conveniently.
+as a straight replacement. Rather than reimplementing Speech, it allows full access
+to the power of the 'say' program, and offers some of its options conveniently.
 
-Say is a function of the operating system and not the server. Thus, it does not generate sound on the server, and cannot be included as a sound source within other sound processes. However, one can patch system audio output to system input (by hardware of by software) and thus route Say-produced sound into the server for processing.
+Say is a function of the operating system and not the server. Thus, it does not generate sound on the server, and cannot be included as a sound source within other sound processes. However, one can patch system audio output to system input (by hardware of by software) and thus route Say-produced sound into the server for processing. One can also use say to render text as spoken soundfiles, and play those with buffers as full audio sources in SC.
+
+You can try out and install voices for many languagesin System Preferences/Dictation & Speech.
+
+First examples:
 
 code::
-// first of of, no need to preload voices
-// - it finds all installed ones
-Say.voices.printAll;"";
+// Say finds all installed voices
+Say.allVoiceNames.printAll;"";
+// each voice has a name, a language symbol, and an example text:
+Say.allVoices.choose;
 
-// like Speech:
-"hi, this is the default voice speaking.".speak;
+// simple text reading methods
 "hi, this is the default voice speaking.".say;
 "hi, this is the first voice speaking.".say(0);
-"hi, this is Anna's voice speaking.".say("Anna");
+"hi, this is a voice speaking that was selected by name.".say("Alex");
 
+"hi, this is a voice speaking that was selected by language.".say(lang: \de);
+
+// replace uses of Speech/speak
+"hi, this is the default voice speaking.".speak;
 
 // each voice has a name, a language symbol, and an example text:
-Say.voices.first.postln.asString.speak;
+Say.voices.first.postln.asString.say("Alex");
 
 // new in Say - you can create events that will be converted to strings to speak:
 (type: \say, text: "hi there, i'm talking with the default voice now").play;
 (type: \say, text: "this is a random voice", voice: Say.voices.choose.name.postln).play;
 (type: \say, text: "Anna aus Doytschland, oder Standard-stimme", voice: "Anna").play;
 
-// check whether you have a certain voice
+// check whether a certain voice is installed
+Say.isValidVoice("Anna");
+::
+
+CLASSMETHODS::
+
+private:: initClass, getVoices, filterVoices, addSayEvent
+
+METHOD:: voices
+the list of the available normal voices
+METHOD:: voiceNames
+the list of names of the available normal voices
+
+METHOD:: allVoices
+the list of all available voices
+METHOD:: allVoiceNames
+the list of names of all available voices
+
+METHOD:: fxVoices
+the list of the available fxVoices (the "funny" voices provided by Apple.)
+METHOD:: fxVoiceNames
+the list of names of all available voices
+
+METHOD:: isValidVoice
+check whether a symbol is a valid voice name.
+
+METHOD:: at
+return the voice dict at <name>.
+
+METHOD:: voicesByLang
+return all voices found for the given langSymbol in optional argVoices (or voices or allVoices).
+
+
+Examples::
+code::
+// Say finds all installed voices
+Say.allVoiceNames.printAll;"";
+// each voice has a name, a language symbol, and an example text:
+Say.allVoices.choose;
+
+// simple text reading methods
+"hi, this is the default voice speaking.".say;
+"hi, this is the first voice speaking.".say(0);
+"hi, this is a voice speaking that was selected by name.".say("Alex");
+
+"hi, this is a voice speaking that was selected by language.".say(lang: \de);
+
+// replace uses of Speech/speak
+"hi, this is the default voice speaking.".speak;
+
+// each voice has a name, a language symbol, and an example text:
+Say.voices.first.postln.asString.say("Alex");
+
+// new in Say - you can create events that will be converted to strings to speak:
+(type: \say, text: "hi there, i'm talking with the default voice now").play;
+(type: \say, text: "this is a random voice", voice: Say.voices.choose.name.postln).play;
+(type: \say, text: "Anna aus Doytschland, oder Standard-stimme", voice: "Anna").play;
+
+// check whether a certain voice is installed
 Say.isValidVoice("Anna");
 
 // events can wait with next bit of code until first one is finished
 // - Note that this blocks the interpreter while speaking!
 (
 "begin ...".postln;
-(type: \say, text: "first sentence ... ", wait: true, ).play;
+(type: \say, text: "first sentence ... ", wait: true ).play;
 "first one done.".postln;
 (type: \say, text: "then second sentence", wait: true).play;
 "... and now second one done.".postln;
 )
 
-// when this is within a Routine, it just works without blocking:
+// Within a Routine, you can add wait times, so you can stop the routine
+// between spoken sentences
 (
 fork {
 	"begin ...".postln;
-	(type: \say, text: "first sentence ... ", wait: true, ).play;
+	(type: \say, text: "first sentence ... ", wait: true).play;
 	"first one done.".postln;
+	1.wait;
 	(type: \say, text: "then second sentence", wait: true).play;
 	"... and now second one done.".postln;
 }
@@ -62,6 +130,7 @@ fork {
 // access voices by number, and use wait
 (
 "hi, this is the first voice in Say.voices speaking".speak(0, true);
+// voice 2 and 3 speak in parallel:
 "hi, this is the second voice in Say.voices speaking".speak(1, false);
 "hi, this is the third voice in Say.voices speaking".speak(2, false);
 )
@@ -74,14 +143,15 @@ fork {
 (type: \say, text: "hi there, i'm talking now", rate: 200).play;
 (type: \say, text: "hi there, i'm talking now", rate: 500).play;
 
-// or the same can be given as command string called 'cmds' :
+// or the same can be given as command string called 'cmds', e.g. rate (syllables/min):
 (type: \say, text: "hi there, i'm talking now", cmds: "-r 500").play;
+(type: \say, text: "hi there, i'm talking now", cmds: "-r 100").play;
 
 // other options include recording to a file:
 (
 (type: \say, text: "hi there, i'm talking now", wait: true, cmds: "-o ~/Desktop/hithere.aiff").play;
 // and we used wait: true so the next action happens when done
-"~/Desktop/hithere5.aiff".openOS;
+"~/Desktop/hithere.aiff".openOS;
 )
 
 // Unfortunately the wait option blocks supercollider until say is done,
@@ -89,7 +159,7 @@ fork {
 (
 Task {
 	Say.voices.keep(5).do { |dict, i|
-		dict.exampleText.asString.speak(i, wait: true);
+		dict.exampleText.asString.say(i, wait: true);
 		1.wait;
 	}
 }.play;
@@ -104,9 +174,11 @@ Task {
 }.play;
 )
 // say is on average 30-40x faster than realtime (on a 2014 macbook pro),
-// so writing soundfiles and reading them into buffers may be fast enough
-// for some near realtime uses.
-Pbind(\note, 24, \dur, 0.5, \legato, 0.1).play
+// so with short text fragments, writing soundfiles and reading them into buffers
+// may be fast enough for many near-realtime uses.
+
+// this posts write times, rendering ratios, reads the files,
+// and plays them back from buffers:
 (
 Task {
 	var time = Main.elapsedTime;
@@ -121,23 +193,13 @@ Task {
 		sfdur = SoundFile.openRead(filename).duration;
 		time = Main.elapsedTime;
 		[dict.name.asSymbol, sfdur, delta, sfdur / delta].round(0.001).postln;
+		Buffer.read(s, filename, action: { |b|
+			b.play;
+			{ b.free }.defer(b.duration + 0.2)
+		});
+		1.wait;
 	};
 	l.mean.postln;
 }.play;
 )
 ::
-
-CLASSMETHODS::
-
-METHOD:: voices
-the list of installed voices
-
-METHOD:: isValidVoice
-check whether a symbol is a valid voice name.
-
-METHOD:: addSayEvent
-used in initClass: adds an event type for say events,
-
-METHOD:: getVoices
-used in initClass: gets the list of installed voices from the system.
-
