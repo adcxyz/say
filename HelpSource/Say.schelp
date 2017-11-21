@@ -34,6 +34,13 @@ Say.allVoices.choose;
 // each voice has a name, a language symbol, and an example text:
 Say.voices.first.postln.asString.say("Alex");
 
+// NEW in Say:
+// - you can say any object:
+s.say; // "localhost"
+[1, 2, 3, 4].scramble.say(lang: \en);
+{ SinOsc.ar }.say("Anna"); // "a Function"
+{ SinOsc.ar }.cs.say("Oskar"); // "{ SinOsc.ar }"
+
 // new in Say - you can create events that will be converted to strings to speak:
 (type: \say, text: "hi there, i'm talking with the default voice now").play;
 (type: \say, text: "this is a random voice", voice: Say.voices.choose.name.postln).play;

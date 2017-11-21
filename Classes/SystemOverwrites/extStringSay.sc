@@ -1,10 +1,21 @@
++ Object {
+	say { |voiceOrIndex, lang, wait = false, cmds|
+		this.asString.say(voiceOrIndex, lang, wait, cmds);
+	}
+}
+
 + String {
 
 	say { |voiceOrIndex, lang, wait = false, cmds|
 		var event = (\type: \say, wait: wait, text: this, cmds: cmds);
 		var voice;
 
-		voiceOrIndex !? {
+		if (voiceOrIndex.isNil) {
+			if (lang.notNil) {
+				voice = Say.voicesByLang(lang.asSymbol).choose;
+				voice !? { event.put(\voice, voice.name) };
+			}
+		} {
 			if (voiceOrIndex.isKindOf(Symbol)
 			or: voiceOrIndex.isKindOf(String)) {
 				voice = voiceOrIndex.asString;
@@ -16,7 +27,8 @@
 			};
 			event.put(\voice, voice);
 		};
-		event.play;
+
+		event.postln.play;
 	}
 
 	// backwards compat
