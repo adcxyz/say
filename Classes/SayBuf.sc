@@ -23,6 +23,11 @@ SayBuf {
 		this.clearDir;
 	}
 
+	*freeBuf { |buf|
+		File.delete(buf.path);
+		buf.free;
+	}
+
 	*clearDir {
 		(SayBuf.dir +/+ "temp*").pathMatch.do { |p| File.delete(p) };
 	}

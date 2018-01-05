@@ -117,20 +117,26 @@ Tdef(\textbuf, {
 		}))
 	};
 	// wait until ready to go:
-	while { bufs.size < 4 } { 0.01.wait };
+	while { bufs.size < 4 } { 0.02.wait };
 	"loading 4 bufs took % seconds.\n".postf(Main.elapsedTime - t0);
 
 	// now say them, with rate and pan args
 	5.do { |i|
-		x.do { |txt|
-			var buf = d[txt];
+		words.do { |txt|
+			var buf = bufs[txt];
 			var rate = 1.1 ** i;
 			// use default SayBuf instrument:
 			(instrument: \saybuf, buf: buf, pan: 1.0.rand2,
-				rate: rate).play;
+				rate: rate).postln.play;
 			(buf.duration / rate / (i+1)).wait;
 		};
 	};
+
+	// cleanup buffers and files when done:
+	1.wait;
+	bufs.do(SayBuf.freeBuf(_));
+	// look ma, no files:
+	SayBuf.dir.openOS;
 }).play(quant: 0);
 )
 
