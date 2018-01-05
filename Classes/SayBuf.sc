@@ -61,7 +61,7 @@ SayBuf {
 		sayEvent.put(\doneFunc, {
 			sayEvent.put(\buf,
 				Buffer.read(server, path, action: { |buf|
-					sayEvent[\bufAction].value(buf, sayEvent)
+					(action ? sayEvent[\bufAction]).value(buf, sayEvent)
 				}, bufnum: bufID)
 			)
 		});

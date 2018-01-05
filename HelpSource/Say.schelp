@@ -12,7 +12,7 @@ to the power of the 'say' program, and offers some of its options conveniently.
 
 Say is a function of the operating system and not the server. Thus, it does not generate sound on the server, and cannot be included as a sound source within other sound processes. However, one can patch system audio output to system input (by hardware of by software) and thus route Say-produced sound into the server for processing. One can also use say to render text as spoken soundfiles, and play those with buffers as full audio sources in SC.
 
-You can try out and install voices for many languagesin System Preferences/Dictation & Speech.
+You can try out and install voices for many languages in System Preferences/Dictation & Speech.
 
 First examples:
 

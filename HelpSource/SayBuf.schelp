@@ -1,0 +1,80 @@
+TITLE:: SayBuf
+summary:: a helper class for Say
+categories:: Speech
+related:: Classes/Say, Class/Buffer
+
+DESCRIPTION::
+SayBuf helps Say render text-to-speech as soundfiles and buffers,
+in order to use play them as sound sources within SC.
+
+CLASSMETHODS::
+
+private:: initClass
+METHOD:: dir
+the dir where SayBuf writes temporary soundfiles
+
+METHOD:: freeBuf
+free a buffer and delete its soundfile
+
+METHOD:: clearDir
+clear all temp soundfiles from dir
+
+METHOD:: bufs
+
+METHOD:: prepare
+prepare a buffer for a code::sayEvent::
+
+ARGUMENT:: sayEvent
+an event as used by Say, e.g.
+code::
+x = (type: \say, text: "speak me", voice: "Alex");
+x.play;
+::
+
+ARGUMENT:: server
+the server on which to render the buffer
+
+ARGUMENT:: action
+the action to perform when buffer is ready
+code::
+SayBuf.prepare(x, s, { |buf| buf.postln.play });
+::
+
+EXAMPLES::
+
+code::
+// prepare four words, say them several times by buffers
+(
+Tdef(\textbuf, {
+    var t0 = Main.elapsedTime;
+    var words = [\Multi, \Folder, \Sunny, \Beach];
+    var bufs = ();
+    words.do { |txt|
+        SayBuf.prepare((lang: \en, text: txt.asString, bufAction: { |b|
+            bufs.put(txt, b);
+        }))
+    };
+    // wait until ready to go:
+    while { bufs.size < 4 } { 0.02.wait };
+    "loading 4 bufs took % seconds.\n".postf(Main.elapsedTime - t0);
+
+    // now say them, with rate and pan args
+    5.do { |i|
+        words.do { |txt|
+            var buf = bufs[txt];
+            var rate = 1.1 ** i;
+            // use default SayBuf instrument:
+            (instrument: \saybuf, buf: buf, pan: 1.0.rand2,
+                rate: rate).postln.play;
+            (buf.duration / rate / (i+1)).wait;
+        };
+    };
+
+    // cleanup buffers and files when done:
+    1.wait;
+    bufs.do(SayBuf.freeBuf(_));
+    // look ma, no files:
+    SayBuf.dir.openOS;
+}).play;
+)
+::
