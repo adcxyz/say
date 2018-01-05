@@ -14,7 +14,7 @@
 	}
 
 	// backwards compat
-	speak {  |voiceOrIndex, wait = false, dict|
-		this.say(voiceOrIndex, wait, dict);
+	speak {  |voiceOrIndex, wait = false, lang, dict|
+		this.say(voiceOrIndex, lang, wait, dict);
 	}
 }

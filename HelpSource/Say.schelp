@@ -94,7 +94,46 @@ Say.findVoice("NoSuchVoice").postcs; // nonexisting voices become nil
 5. render spoken text to buffers, to use them as sound sources in SC:
 code::
 // text to be spoken, event for extra specs, action to do when buffer is ready
-Say.buf("this is a buffered voice", event: (voice: \Anna), action: { |b| b.play });
+SayBuf.prepare( (text: "this is a buffered voice", bufAction: { |b| b.play }) )
+
+// say four words trhough buffers as quickly as possible:
+(
+[\Multi, \Folder, \Sunny, \Beach].do { |txt|
+	SayBuf.prepare((lang: \en, text: txt.asString, bufAction: { |b|
+		b.play;
+	}));
+};
+)
+
+// prepare four words, say them several times by buffers
+(
+Tdef(\textbuf, {
+	var t0 = Main.elapsedTime;
+	var words = [\Multi, \Folder, \Sunny, \Beach];
+	var bufs = ();
+	words.do { |txt|
+		SayBuf.prepare((lang: \en, text: txt.asString, bufAction: { |b|
+			bufs.put(txt, b);
+		}))
+	};
+	// wait until ready to go:
+	while { bufs.size < 4 } { 0.01.wait };
+	"loading 4 bufs took % seconds.\n".postf(Main.elapsedTime - t0);
+
+	// now say them, with rate and pan args
+	5.do { |i|
+		x.do { |txt|
+			var buf = d[txt];
+			var rate = 1.1 ** i;
+			// use default SayBuf instrument:
+			(instrument: \saybuf, buf: buf, pan: 1.0.rand2,
+				rate: rate).play;
+			(buf.duration / rate / (i+1)).wait;
+		};
+	};
+}).play(quant: 0);
+)
+
 ::
 
 CLASSMETHODS::
@@ -135,31 +174,7 @@ Say.voicesByLang(\en)
 
 Examples::
 code::
-// Say finds all installed voices
-Say.allVoiceNames.printAll;"";
-// each voice has a name, a language symbol, and an example text:
-Say.allVoices.choose;
-
-// simple text reading methods
-"hi, this is the default voice speaking.".say;
-"hi, this is the first voice speaking.".say(0);
-"hi, this is a voice speaking that was selected by name.".say("Alex");
-
-"hi, this is a voice speaking that was selected by language.".say(lang: \de);
-
-// replace uses of Speech/speak
-"hi, this is the default voice speaking.".speak;
-
-// each voice has a name, a language symbol, and an example text:
-Say.voices.first.postln.asString.say("Alex");
-
-// new in Say - you can create events that will be converted to strings to speak:
-(type: \say, text: "hi there, i'm talking with the default voice now").play;
-(type: \say, text: "this is a random voice", voice: Say.voices.choose.name.postln).play;
-(type: \say, text: "Anna aus Doytschland, oder Standard-stimme", voice: "Anna").play;
-
-// check whether a certain voice is installed
-Say.isValidVoice("Anna");
+// PLEASE SEE TOP EXAMPLES FIRST, then here:
 
 // events can wait with next bit of code until first one is finished
 // - Note that this blocks the interpreter while speaking!
@@ -184,10 +199,20 @@ fork {
 }
 )
 
+// Unfortunately the wait option blocks supercollider until say is done,
+// so this example could take a while before you can access the interpreter again:
+(
+Task {
+	Say.voices.keep(5).do { |dict, i|
+		dict.exampleText.asString.say(i, wait: true);
+		// leave holes to stop with cmd-period:
+		0.2.wait;
+	}
+}.play;
+)
+
 // You can also use a doneFunc to do something when a say event is finished:
 (type: \say, text: "hi there", doneFunc: { "done!".postcs }).play;
-
-
 // access voices by number, and use wait
 (
 "hi, this is the first voice in Say.voices speaking".speak(0, true);
@@ -211,58 +236,86 @@ fork {
 
 // other options include recording to a file:
 (
-(type: \say, text: "hi there, i'm talking now", wait: true, cmds: "-o ~/Desktop/hithere.aiff").play;
+(type: \say, text: "prepare text to buffer", wait: true, cmds: "-o ~/Desktop/text.aiff").play;
 // and we used wait: true so the next action happens when done
-"~/Desktop/hithere.aiff".openOS;
+"~/Desktop/text.aiff".openOS;
+unixCmd("afplay" + "~/Desktop/text.aiff");
 )
 
-// Unfortunately the wait option blocks supercollider until say is done,
-// so this example could take a while before you can access the interpreter again:
-(
-Task {
-	Say.voices.keep(5).do { |dict, i|
-		dict.exampleText.asString.say(i, wait: true);
-		1.wait;
-	}
-}.play;
-)
 
-(
-Task {
-	Say.voices.do { |dict, i|
-		dict.exampleText.asString.speak(i);
-		1.wait;
-	}
-}.play;
-)
-
-// say is on average 30-40x faster than realtime (on a 2014 macbook pro),
+// say is on average 20-40x faster than realtime (on a 2014 macbook pro),
 // so with short text fragments, writing soundfiles and reading them into buffers
-// may be fast enough for many near-realtime uses.
+// is fast enough for many near-realtime uses.
 
-// this posts write times, rendering ratios, reads the files,
-// and plays them back from buffers:
+// use saybuf to write to a buffer and use it:
+SayBuf.prepare((type: \say, voice: "Anna", text: "saybuf", bufAction: { |b| b.play }));
+
+
+// prepare a single file by hand, to measure time it takes:
 (
-Task {
-	var time = Main.elapsedTime;
-	var delta, sfdur;
-	l = Say.voices.collect { |dict|
-		var filename = "~/Desktop/%.aiff".format(dict.name).standardizePath;
-
-		(type: \say, voice: dict.name, text: dict.exampleText,
-			cmds: "-o" + filename, wait:true).play;
-		delta = (Main.elapsedTime - time);
-
-		sfdur = SoundFile.openRead(filename).duration;
-		time = Main.elapsedTime;
-		[dict.name.asSymbol, sfdur, delta, sfdur / delta].round(0.001).postln;
-		Buffer.read(s, filename, action: { |b|
-			b.play;
-			{ b.free }.defer(b.duration + 0.2)
-		});
-		1.wait;
-	};
-	l.mean.postln;
-}.play;
+var x = File.mkdir("~/Desktop/saybuf".standardizePath);
+var dict = Say.voices.choose;
+var starttime = Main.elapsedTime;
+var path = "~/Desktop/saybuf/%.aiff".format(dict.name).standardizePath;
+var event = (type: \say, voice: dict.name, text: dict.exampleText, wait: true,
+	cmds: "-o" + path).play;
+var writetime = Main.elapsedTime - starttime;
+var sfdur = SoundFile.openRead(path).duration;
+"// dur, prepTime, ratio: ".postln;
+[sfdur, writetime, sfdur / writetime].round(0.001).postln;
 )
+
+// prepare a lot of them in sequence and measure time:
+(
+var x = File.mkdir("~/Desktop/saybuf".standardizePath);
+var starttime = Main.elapsedTime;
+var delta, sfdur;
+var pathnames = Say.voices.collect { |dict|
+	var path = "~/Desktop/saybuf/%.aiff".format(dict.name).standardizePath;
+	(type: \say, voice: dict.name, text: dict.exampleText,
+		cmds: "-o" + path, wait: true).play;
+	path
+};
+var writetime = Main.elapsedTime - starttime;
+var durs = pathnames.collect { |path|
+	SoundFile.openRead(path).duration;
+};
+var ratio = durs.sum / writetime;
+"// durSum, prepTime, ratio: ".postln;
+[durs.sum, writetime, ratio].round(0.001).postln;
+)
+
+// maybe faster preparation with fork?
+(
+SayBuf.clearDir;
+Tdef(\prepAll, {
+	var start = Main.elapsedTime;
+	var durSum, prepTime, ratio;
+	d = ();
+	Say.allVoices.do { |dict|
+		var writetime, dur, ratio;
+		fork {
+			SayBuf.prepare(
+				(voice: dict.name, text: dict.exampleText, bufAction: { |b|
+					writetime = Main.elapsedTime - start;
+					dur = b.duration;
+					ratio = dur / writetime;
+					d.put(dict.name.asSymbol, [dur, writetime, ratio])
+				})
+			);
+		}
+	};
+	while { d.size < Say.allVoices.size } { 0.01.wait };
+	durSum = d.sum(_[0]);
+	prepTime = Main.elapsedTime - start;
+	ratio = durSum / prepTime;
+	"// durSum, prepTime, ratio: ".postln;
+	[durSum, prepTime, ratio].round(0.001).postln;
+
+}).play;
+)
+
+// try also with SayBuf.prepare in fork and non-fork ...
+// add example to play buf once and then delete buf and file ...
+
 ::
