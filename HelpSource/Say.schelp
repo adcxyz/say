@@ -1,11 +1,11 @@
 TITLE:: Say
 summary:: speak text with OSX system voices
 categories:: Speech Synthesis
-related:: Classes/Speech
+related:: Classes/Speech, Classes/SayBuf
 
 
 DESCRIPTION::
-Say replaces the former OSX speech synthesis used in SuperCollider, Speech.
+Say replaces the deprecated former OSX speech synthesis used in SuperCollider, Speech.
 Because the underlying commandline program, 'say', is quite different, it does not work
 as a straight replacement. Rather than reimplementing Speech, it allows full access
 to the power of the 'say' program, and offers some of its options conveniently.
@@ -19,7 +19,8 @@ First examples:
 code::
 // Say finds all installed voices
 Say.allVoices.size;
-Say.fxVoices.size; // filter silly voices by default
+Say.fxVoices.size; // filter effects voices into here by default
+Say.voices.size; // voices just has the normal ones
 
 Say.allVoiceNames.printAll;"";
 // each voice is a dict which has a name, a language name and short symbol,
@@ -96,13 +97,35 @@ code::
 // text to be spoken, event for extra specs, action to do when buffer is ready
 SayBuf.prepare( (text: "this is a buffered voice", bufAction: { |b| b.play }) )
 
-// say four words trhough buffers as quickly as possible:
+// say four words through buffers as quickly as possible:
 (
 [\Multi, \Folder, \Sunny, \Beach].do { |txt|
 	SayBuf.prepare((lang: \en, text: txt.asString, bufAction: { |b|
 		b.play;
 	}));
 };
+)
+
+(
+Tdef(\allVoicesByBuf, {
+	Say.voices.do { |voicedict|
+		var ev = (
+			voice: voicedict.name.postcs,
+			text: voicedict.exampleText,
+			// play buffer instantly when it is ready:
+			bufAction: { |buf|
+				(instrument: \saybuf, buf: buf,
+					pan: 1.0.rand2).play;
+			}
+		);
+		SayBuf.prepare(ev, s);
+		1.wait;
+	};
+	// wait for last buffer to finish
+	5.wait;
+	// then free all buffers and delete temp soundfiles
+	SayBuf.freeBufs;
+}).play;
 )
 
 // prepare four words, say them several times by buffers
@@ -134,7 +157,7 @@ Tdef(\textbuf, {
 
 	// cleanup buffers and files when done:
 	1.wait;
-	bufs.do(SayBuf.freeBuf(_));
+	SayBuf.freeBufs;
 	// look ma, no files:
 	SayBuf.dir.openOS;
 }).play(quant: 0);
@@ -248,80 +271,6 @@ Task {
 unixCmd("afplay" + "~/Desktop/text.aiff");
 )
 
-
-// say is on average 20-40x faster than realtime (on a 2014 macbook pro),
-// so with short text fragments, writing soundfiles and reading them into buffers
-// is fast enough for many near-realtime uses.
-
-// use saybuf to write to a buffer and use it:
-SayBuf.prepare((type: \say, voice: "Anna", text: "saybuf", bufAction: { |b| b.play }));
-
-
-// prepare a single file by hand, to measure time it takes:
-(
-var x = File.mkdir("~/Desktop/saybuf".standardizePath);
-var dict = Say.voices.choose;
-var starttime = Main.elapsedTime;
-var path = "~/Desktop/saybuf/%.aiff".format(dict.name).standardizePath;
-var event = (type: \say, voice: dict.name, text: dict.exampleText, wait: true,
-	cmds: "-o" + path).play;
-var writetime = Main.elapsedTime - starttime;
-var sfdur = SoundFile.openRead(path).duration;
-"// dur, prepTime, ratio: ".postln;
-[sfdur, writetime, sfdur / writetime].round(0.001).postln;
-)
-
-// prepare a lot of them in sequence and measure time:
-(
-var x = File.mkdir("~/Desktop/saybuf".standardizePath);
-var starttime = Main.elapsedTime;
-var delta, sfdur;
-var pathnames = Say.voices.collect { |dict|
-	var path = "~/Desktop/saybuf/%.aiff".format(dict.name).standardizePath;
-	(type: \say, voice: dict.name, text: dict.exampleText,
-		cmds: "-o" + path, wait: true).play;
-	path
-};
-var writetime = Main.elapsedTime - starttime;
-var durs = pathnames.collect { |path|
-	SoundFile.openRead(path).duration;
-};
-var ratio = durs.sum / writetime;
-"// durSum, prepTime, ratio: ".postln;
-[durs.sum, writetime, ratio].round(0.001).postln;
-)
-
-// maybe faster preparation with fork?
-(
-SayBuf.clearDir;
-Tdef(\prepAll, {
-	var start = Main.elapsedTime;
-	var durSum, prepTime, ratio;
-	d = ();
-	Say.allVoices.do { |dict|
-		var writetime, dur, ratio;
-		fork {
-			SayBuf.prepare(
-				(voice: dict.name, text: dict.exampleText, bufAction: { |b|
-					writetime = Main.elapsedTime - start;
-					dur = b.duration;
-					ratio = dur / writetime;
-					d.put(dict.name.asSymbol, [dur, writetime, ratio])
-				})
-			);
-		}
-	};
-	while { d.size < Say.allVoices.size } { 0.01.wait };
-	durSum = d.sum(_[0]);
-	prepTime = Main.elapsedTime - start;
-	ratio = durSum / prepTime;
-	"// durSum, prepTime, ratio: ".postln;
-	[durSum, prepTime, ratio].round(0.001).postln;
-
-}).play;
-)
-
-// try also with SayBuf.prepare in fork and non-fork ...
-// add example to play buf once and then delete buf and file ...
-
+// For more examples on preparing speech buffers, see:
+SayBuf.help
 ::
