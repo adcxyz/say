@@ -3,6 +3,7 @@ Say {
 	classvar <allVoices, <allVoiceNames;
 	classvar <fxVoices, <fxVoiceNames;
 	classvar <allLangs, <allLangNames;
+	classvar <defaultVoiceName;
 
 	*initClass {
 		Platform.case(\osx,
@@ -10,10 +11,17 @@ Say {
 				Say.getVoices;
 				Say.getLangs;
 				Say.addSayEvent;
+				Say.getDefaultVoice;
 			}, {
 				"The Quark 'say' is currently only available on osx.".postln
 			}
 		);
+	}
+
+	*getDefaultVoice {
+		^defaultVoiceName =
+		unixCmdGetStdOut("defaults read com.apple.speech.voice.prefs SelectedVoiceName")
+		.select(_.isAlpha);
 	}
 
 	*getVoices {
@@ -28,6 +36,7 @@ Say {
 		};
 		allVoiceNames = allVoices.collect(_.name);
 		this.filterVoices;
+
 	}
 
 	*getLangs {
@@ -78,6 +87,10 @@ Say {
 		}
 	}
 
+	*fillVoice { |event|
+		^event.put(\voice, Say.findVoice(event[\voice], event[\lang]))
+	}
+
 	*findVoice { |voiceOrIndex, lang|
 		var voiceDict, voice;
 
@@ -99,7 +112,7 @@ Say {
 			voice = voice !? { voice.name }
 		};
 
-		^voice
+		^voice ? defaultVoiceName
 	}
 
 	*addSayEvent {
