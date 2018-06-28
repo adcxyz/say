@@ -18,6 +18,16 @@ Say {
 		);
 	}
 
+	sayVoiceNames { |lang|
+		var who = Say.voicesByLang(\en);
+		if (who.isEmpty) { who = Say.voices };
+		fork {
+			who.do { |vdict|
+				(vdict.name + "-" + vdict.langName).say(vdict.name, wait: true);
+			}
+		}
+	}
+
 	*getDefaultVoice {
 		^defaultVoiceName =
 		unixCmdGetStdOut("defaults read com.apple.speech.voice.prefs SelectedVoiceName")
