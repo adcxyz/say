@@ -31,13 +31,13 @@ Say.allVoices.choose.cs;
 "hi, this is the default voice speaking.".say;
 "hi, this is the first voice speaking.".say(0);
 "hi, this is a voice speaking that was selected by name.".say("Alex");
-"hi, this is a voice speaking that was selected by language.".say(lang: \de);
+"hi, dies ist hoffentlich eine deutsche Stimme, ausgesucht durch die Sprache.".say(lang: \de);
 
 // replace uses of Speech/speak
 "hi, this is the default voice speaking.".speak;
 
 // each voice has a name, a language symbol, and an example text:
-Say.voices.first.postln.asString.say("Alex");
+Say.voices.first.postln.say("Alex");
 ::
 
 strong:: NEW Features in Say: ::
@@ -48,7 +48,7 @@ code::
 s.say; // "localhost"
 [1, 2, 3, 4].scramble.say(lang: \en);
 { SinOsc.ar }.say("Anna"); // "a Function"
-{ SinOsc.ar }.cs.say("Oskar"); // "{ SinOsc.ar }"
+{ SinOsc.ar }.cs.say("Anna"); // "{ SinOsc.ar }"
 Dictionary[\a -> 1, \b -> 2].say(lang: \en);
 ::
 
@@ -71,9 +71,9 @@ Say.allLangNames.postcs
 Say.isValidLang(\en)
 Say.voicesByLang("en")
 Say.isValidLang(\en_GB) // any British speakers in da house?
-Say.voicesByLang(\en_GB) // these
+Say.voicesByLang(\en_GB) // these ones
 
-Say.isValidLang("pt") // alguem fala portugues?
+Say.isValidLang("pt") // alguem que fala portugues?
 Say.voicesByLang("pt").size // in my case, 3 voices
 
 Say.voicesByLang("pt").collect(_.langName) // 3 in my case
@@ -86,10 +86,12 @@ Say.isValidLang("pt_BR") // so brazilian portuguese is valid
 code::
 Say.findVoice(0); // by index in allVoices
 Say.findVoice;    // default is nil, becomes default system voice
+Say.defaultVoiceName;    // you can ask which it is
+
 Say.findVoice(lang: \en); // random voice for a given language
 Say.findVoice(lang: \pt).postcs; // in my case, one of the 3 above
 Say.findVoice("Anna").postcs;  // if German, this is present
-Say.findVoice("NoSuchVoice").postcs; // nonexisting voices become nil
+Say.findVoice("NoSuchVoice").postcs; // nonexisting voices become default voice
 ::
 
 5. render spoken text to buffers, to use them as sound sources in SC:
@@ -97,71 +99,19 @@ code::
 // text to be spoken, event for extra specs, action to do when buffer is ready
 SayBuf.prepare( (text: "this is a buffered voice", bufAction: { |b| b.play }) )
 
+// see more examples in
+SayBuf.help;
+
 // say four words through buffers as quickly as possible:
 (
 [\Multi, \Folder, \Sunny, \Beach].do { |txt|
 	SayBuf.prepare((lang: \en, text: txt.asString, bufAction: { |b|
+		txt.postln;
 		b.play;
 	}));
 };
 )
 
-(
-Tdef(\allVoicesByBuf, {
-	Say.voices.do { |voicedict|
-		var ev = (
-			voice: voicedict.name.postcs,
-			text: voicedict.exampleText,
-			// play buffer instantly when it is ready:
-			bufAction: { |buf|
-				(instrument: \saybuf, buf: buf,
-					pan: 1.0.rand2).play;
-			}
-		);
-		SayBuf.prepare(ev, s);
-		1.wait;
-	};
-	// wait for last buffer to finish
-	5.wait;
-	// then free all buffers and delete temp soundfiles
-	SayBuf.freeBufs;
-}).play;
-)
-
-// prepare four words, say them several times by buffers
-(
-Tdef(\textbuf, {
-	var t0 = Main.elapsedTime;
-	var words = [\Multi, \Folder, \Sunny, \Beach];
-	var bufs = ();
-	words.do { |txt|
-		SayBuf.prepare((lang: \en, text: txt.asString, bufAction: { |b|
-			bufs.put(txt, b);
-		}))
-	};
-	// wait until ready to go:
-	while { bufs.size < 4 } { 0.02.wait };
-	"loading 4 bufs took % seconds.\n".postf(Main.elapsedTime - t0);
-
-	// now say them, with rate and pan args
-	5.do { |i|
-		words.do { |txt|
-			var buf = bufs[txt];
-			var rate = 1.1 ** i;
-			// use default SayBuf instrument:
-			(instrument: \saybuf, buf: buf, pan: 1.0.rand2,
-				rate: rate).postln.play;
-			(buf.duration / rate / (i+1)).wait;
-		};
-	};
-
-	// cleanup buffers and files when done:
-	1.wait;
-	SayBuf.freeBufs;
-	// look ma, no files:
-	SayBuf.dir.openOS;
-}).play(quant: 0);
-)
 
 ::
 
