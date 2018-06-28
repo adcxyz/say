@@ -7,6 +7,8 @@ Say {
 	classvar <clipRate = true;
 	classvar <>maxRate = 720, <>minRate = 90;
 
+	classvar <pendingPIDs, <>maxPIDs = 10;
+
 	*initClass {
 		Platform.case(\osx,
 			{
@@ -14,6 +16,7 @@ Say {
 				Say.getLangs;
 				Say.addSayEvent;
 				Say.getDefaultVoice;
+				pendingPIDs = List[];
 			}, {
 				"The Quark 'say' is currently only available on osx.".postln
 			}
@@ -131,7 +134,9 @@ Say {
 	*addSayEvent {
 
 		Event.addEventType(\say, {
-			var str = "say", cond;
+			var str = "say", cond, pid, thisEvent;
+
+			thisEvent = currentEnvironment;
 
 			if (this.isValidVoice(~voice).not) {
 				~voice = Say.findVoice(~voice ? ~voiceOrIndex, ~lang);
@@ -146,22 +151,35 @@ Say {
 			// write to file could be here:
 			~cmds !? { str = str + ~cmds };
 			str = str + quote(~text ? "");
-			// str.postcs;
-			if (~wait == true) {
-				if (thisThread.isKindOf(Routine)) {
-					cond = Condition.new;
-					unixCmd(str, {
-						cond.unhang;
-						~doneFunc.value;
-					});
-					cond.hang;
-				} {
-					// ugly wait by blocking ...
-					unixCmdGetStdOut(str);
-					~doneFunc.value;
-				};
+
+			if (pendingPIDs.size > maxPIDs) {
+				// emergency break to avoid choking the say utility:
+				"*** SAY: too many events! not saying: %\n"
+				.postf(currentEnvironment.text.cs);
 			} {
-				unixCmd(str, ~doneFunc);
+				if (~wait == true) {
+					if (thisThread.isKindOf(Routine)) {
+						cond = Condition.new;
+						pid = unixCmd(str, {
+							cond.unhang;
+							thisEvent[\doneFunc].value;
+						});
+						pendingPIDs.add(pid);
+						cond.hang;
+						pendingPIDs.remove(pid);
+					} {
+						currentEnvironment = thisEvent;
+						// ugly wait by blocking ...
+						unixCmdGetStdOut(str);
+						thisEvent[\doneFunc].value;
+					};
+				} {
+					pid = unixCmd(str, {
+						thisEvent[\doneFunc].value;
+						pendingPIDs.remove(pid);
+					});
+					pendingPIDs.add(pid);
+				}
 			}
 		});
 	}
