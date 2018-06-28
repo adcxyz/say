@@ -4,16 +4,26 @@ categories:: Speech Synthesis
 related:: Classes/Say, Classes/Buffer
 
 DESCRIPTION::
-SayBuf helps Say render text-to-speech as soundfiles and buffers,
+SayBuf helps the Say class to render text-to-speech as soundfiles and buffers,
 in order to use play them as sound sources within SC.
 
-Rendering 'say' results to soundfiles is on average 15-40x faster than realtime (tested on a 2014 Macbook Pro), so with short text fragments, writing soundfiles and reading them into buffers is fast enough for many near-realtime uses.
+Rendering say-events to soundfiles is on average 15-40x faster than realtime (tested on a 2014 Macbook Pro), so with short text fragments, writing soundfiles and reading them into buffers is fast enough for near-realtime use.
+
+SayBuf has two schemes for preparing buffers:
+By default, it uses a ring of 100 buffers that get used round-robin.
+This leaves the most recent buffers loaded, and is recommended.
+
+Creating and freeing buffers individually is also supported.
+
+code::
+SayBuf.usesRoundRobin
+::
 
 code::
 // prepare a sayEvent, use bufAction to say it as soon as ready:
-SayBuf.prepare( (text: "this is from a buffer!", voice: \Alex, bufAction: (_.play)) );
+SayBuf.prepare( (text: "this is 'say' from a buffer!", voice: \Alex, bufAction: (_.play)) );
 
-// Say all examples texts for voices with buffers:
+// Say the example texts for all voices backwards with buffers:
 (
 Tdef(\allVoicesByBuf, {
 	Say.voices.do { |voicedict|
@@ -23,7 +33,7 @@ Tdef(\allVoicesByBuf, {
 			text: voicedict.exampleText,
 			// this will play the buffer instantly when it is ready:
 			bufAction: { |buf|
-				(instrument: \saybuf, buf: buf,
+				(instrument: \saybuf, buf: buf.bufnum,
 					pan: 1.0.rand2, // stereo pan
 					rate: exprand(-0.5, -2) // randomize playback rate
 				).postln.play;
@@ -35,10 +45,11 @@ Tdef(\allVoicesByBuf, {
 	};
 	// wait long enough for the last buffer to finish playback
 	5.wait;
-	// then free all buffers and delete temp soundfiles
-	SayBuf.freeBufs;
+	// if you used the bufs pool, the free all buffers and delete temp soundfiles
+	// SayBuf.freeBufs;
 }).play;
 )
+
 ::
 
 CLASSMETHODS::
@@ -48,12 +59,17 @@ METHOD:: dir
 the dir where SayBuf writes temporary soundfiles
 
 METHOD:: freeBuf
-free a buffer and delete its soundfile
+free a buffer and delete its soundfile. By default, this waits for
+buffer duration * 1.1 + server latency before freeing the buffer.
 
 METHOD:: clearDir
 clear all temp soundfiles from dir
 
 METHOD:: bufs
+the dictionary of recently created buffers
+
+METHOD:: bufring
+the ring of reserved buffers that get re-used when using roundRobin buffers.
 
 METHOD:: prepare
 prepare a buffer for a code::sayEvent::
@@ -80,41 +96,40 @@ code::
 // prepare four words, say them several times by buffers
 (
 Tdef(\textbuf, {
-    var t0 = Main.elapsedTime;
-    var words = [\Multi, \Folder, \Sunny, \Beach];
-    var bufs = ();
-    words.do { |txt|
-        SayBuf.prepare((lang: \en, text: txt.asString, bufAction: { |b|
-            bufs.put(txt, b);
-        }))
-    };
-    // wait until ready to go:
-    while { bufs.size < 4 } { 0.02.wait };
-    "loading 4 bufs took % seconds.\n".postf(Main.elapsedTime - t0);
+	var t0 = Main.elapsedTime;
+	var words = [\Multi, \Folder, \Sunny, \Beach];
+	var mybufs = ();
+	words.do { |txt|
+		SayBuf.prepare((lang: \en, text: txt.asString, bufAction: { |b|
+			mybufs.put(txt, b);
+		}))
+	};
+	// wait until ready to go:
+	while { mybufs.size < 4 } { 0.1.wait };
+	"loading 4 bufs took % seconds.\n".postf(Main.elapsedTime - t0);
 
-    // now say them, with rate and pan args
-    5.do { |i|
-        words.do { |txt|
-            var buf = bufs[txt];
-            var rate = 1.1 ** i;
-            // use default SayBuf instrument:
-            (instrument: \saybuf, buf: buf, pan: 1.0.rand2,
-                rate: rate).postln.play;
-            (buf.duration / rate / (i+1)).wait;
-        };
-    };
+	// now say them, with rate and pan args
+	5.do { |i|
+		words.do { |txt|
+			var buf = mybufs[txt];
+			var rate = 1.1 ** i;
+			// use default SayBuf instrument:
+			(instrument: \saybuf, buf: buf, pan: 1.0.rand2,
+				rate: rate).postln.play;
+			(buf.duration / rate / (i+1)).wait;
+		};
+	};
 
-    // cleanup buffers and files when done:
-    1.wait;
-    bufs.do(SayBuf.freeBuf(_));
-    // look ma, no files:
-    SayBuf.dir.openOS;
+	// cleanup buffers and files when done:
+	1.wait;
+
+	mybufs.do(SayBuf.freeBuf(_));
+
 }).play;
 )
 ::
 
 subsection::More on Preparing Speech to Buffers
-
 
 // TODO: measure all prepare variants and recommend best ones.
 // e.g. try with SayBuf.prepare in fork and non-fork versions.
@@ -123,7 +138,6 @@ code::
 
 // use saybuf to write to a buffer and use it:
 SayBuf.prepare((type: \say, voice: "Anna", text: "saybuf", bufAction: { |b| b.play }));
-
 
 
 // prepare a single file by hand, to measure time it takes:
@@ -140,13 +154,14 @@ var sfdur = SoundFile.openRead(path).duration;
 [sfdur, writetime, sfdur / writetime].round(0.001).postln;
 )
 
-// prepare a lot of them in sequence and measure time:
+// prepare a lot of them in sequence with WAITING and measure overall time:
 (
 var x = File.mkdir("~/Desktop/saybuf".standardizePath);
 var starttime = Main.elapsedTime;
 var delta, sfdur;
 var pathnames = Say.voices.collect { |dict|
 	var path = "~/Desktop/saybuf/%.aiff".format(dict.name).standardizePath;
+	"preparing : %\n".postf(dict.name);
 	(type: \say, voice: dict.name, text: dict.exampleText,
 		cmds: "-o" + path, wait: true).play;
 	path
@@ -160,27 +175,36 @@ var ratio = durs.sum / writetime;
 [durs.sum, writetime, ratio].round(0.001).postln;
 )
 
-// maybe faster preparation with fork?
+// on MacBook Pro 2015 2,9 GHz Intel Core i5:
+// durSum, prepTime, ratio:
+[ 238.263, 16.778, 14.201 ]
+
+
+// prepare a lot of files by pipeline using maxPIDs
 (
-SayBuf.clearDir;
+Say.pendingPIDs.clear;
+Say.maxPIDs = 16;
+
 Tdef(\prepAll, {
 	var start = Main.elapsedTime;
 	var durSum, prepTime, ratio;
-	d = ();
-	Say.allVoices.do { |dict|
-		var writetime, dur, ratio;
-		fork {
-			SayBuf.prepare(
-				(voice: dict.name, text: dict.exampleText, bufAction: { |b|
-					writetime = Main.elapsedTime - start;
-					dur = b.duration;
-					ratio = dur / writetime;
-					d.put(dict.name.asSymbol, [dur, writetime, ratio])
-				})
-			);
-		}
+
+	Say.voices.do { |dict|
+		Say.pendingPIDs.size.postln;
+		while { Say.pendingPIDs.size >= (Say.maxPIDs - 1) } { 0.01.wait };
+		"preparing : %\n".postf(dict.name);
+		SayBuf.prepare(
+			(voice: dict.name, text: dict.exampleText, bufAction: { |b|
+				var writetime = Main.elapsedTime - start;
+				var dur = b.duration;
+				ratio = dur / writetime;
+				d.put(dict.name.asSymbol, [dur, writetime, ratio])
+			})
+		);
+		0.01.wait;
 	};
-	while { d.size < Say.allVoices.size } { 0.01.wait };
+
+	while { d.size < Say.voices.size } { 0.01.wait };
 	durSum = d.sum(_[0]);
 	prepTime = Main.elapsedTime - start;
 	ratio = durSum / prepTime;
@@ -189,4 +213,9 @@ Tdef(\prepAll, {
 
 }).play;
 )
+// on MacBook Pro 2015 2,9 GHz Intel Core i5:
+// not really faster, even a bit slower ...
+// durSum, prepTime, ratio:
+[ 238.263, 18.19, 13.099 ]
+
 ::
