@@ -50,6 +50,31 @@ Tdef(\allVoicesByBuf, {
 }).play;
 )
 
+// The newer high-res voices can have rates between 90 and 720 syllables per second.
+// say ignores rates outside that range and plays them at default rate!
+// Therefore, Say clips them to this range, so that e.g. too-fast rates run at maimum rate.
+(
+Tdef(\rateTest, {
+	var rates = (16..0).linexp(0, 16, 90, 720).round(0.01).postln;
+	rates.do { |rate|
+		var ev = (
+			rate: rate,
+			text: "rate test 1 2 3 4 5",
+			bufAction: { |buf|
+				(instrument: \saybuf,
+					buf: buf.bufnum,
+					pan: 1.0.rand2, // stereo pan
+				).postln.play;
+			}
+		);
+		// render it to a buffer
+		SayBuf.prepare(ev, s);
+		1.wait;
+	};
+}).play;
+)
+
+
 ::
 
 CLASSMETHODS::
