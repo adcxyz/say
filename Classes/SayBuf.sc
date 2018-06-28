@@ -45,9 +45,17 @@ SayBuf {
 		bufs.do(this.freeBuf(_));
 	}
 
-	*freeBuf { |buf|
-		File.delete(buf.path);
-		buf.free;
+	*freeBuf { |buf, dt|
+		// by default, remove after buffer duration + some safety time
+		dt = dt ?? { buf.duration * 1.1 + (buf.server.latency ? 0) + 0.1 };
+		defer ({
+			if (verbose) {
+				"freeing buf: % - %\n".postf(buf.bufnum, buf.path.basename);
+			};
+			File.delete(buf.path);
+			bufs.removeAt(buf.bufnum);
+			buf.free;
+		}, dt)
 	}
 
 	*clearDir {
