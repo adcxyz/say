@@ -69,7 +69,8 @@ Say {
 			"Agnes", "Albert", "Bad", "Bahh", "Bells", "Boing",
 			"Bubbles", "Bruce", "Cellos", "Deranged", "Fred",
 			"Good", "Hysterical", "Junior", "Pipe",
-			"Princess", "Ralph", "Trinoids", "Whisper", "Zarvox",
+			"Princess", "Ralph", "Trinoids",
+			"Vicki", "Victoria", "Whisper", "Zarvox",
 			"NONEXISTENTVOICE_shouldBeFiltered"
 		];
 		fxVoiceNames = fxVoiceNames.select { |name| this.isValidVoice(name) };
