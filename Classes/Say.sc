@@ -4,6 +4,8 @@ Say {
 	classvar <fxVoices, <fxVoiceNames;
 	classvar <allLangs, <allLangNames;
 	classvar <defaultVoiceName;
+	classvar <clipRate = true;
+	classvar <>maxRate = 720, <>minRate = 90;
 
 	*initClass {
 		Platform.case(\osx,
@@ -136,7 +138,10 @@ Say {
 			if (~voice.notNil) { str = str + "-v" + ~voice };
 
 			// support rate flag - more flags could be supported here as well
-			~rate !? { str = str + "-r" + ~rate };
+			~rate !? {
+				if (clipRate) { ~rate = ~rate.clip(minRate, maxRate) };
+				str = str + "-r" + ~rate
+			};
 			// write to file could be here:
 			~cmds !? { str = str + ~cmds };
 			str = str + quote(~text ? "");
