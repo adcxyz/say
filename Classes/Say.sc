@@ -4,10 +4,11 @@ Say {
 	classvar <fxVoices, <fxVoiceNames;
 	classvar <allLangs, <allLangNames;
 	classvar <defaultVoiceName;
-	classvar <clipRate = true;
-	classvar <>maxRate = 720, <>minRate = 90;
 
 	classvar <pendingPIDs, <>maxPIDs = 10;
+
+	classvar <clipRate = true;
+	classvar <>minRate = 90, <>maxRate = 720;
 
 	*initClass {
 		Platform.case(\osx,
