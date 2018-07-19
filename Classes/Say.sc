@@ -24,13 +24,20 @@ Say {
 		);
 	}
 
-	sayVoiceNames { |lang|
-		var who = Say.voicesByLang(\en);
-		if (who.isEmpty) { who = Say.voices };
-		fork {
-			who.do { |vdict|
-				(vdict.name + "-" + vdict.langName).say(vdict.name, wait: true);
+	*sayVoiceName { |name|
+		var voiceDict = Say.at(name);
+		if (voiceDict.notNil) {
+			forkIfNeeded {
+				(name + "-" + voiceDict.langName).say(name, wait: true);
 			}
+		}
+	}
+
+	*sayVoiceNames { |lang|
+		var dicts = Say.voicesByLang(lang);
+		if (dicts.isEmpty) { dicts = Say.voices };
+		forkIfNeeded {
+			dicts.do { |dict| Say.sayVoiceName(dict.name) }
 		}
 	}
 
@@ -108,7 +115,7 @@ Say {
 		^event.put(\voice, Say.findVoice(event[\voice], event[\lang]))
 	}
 
-	*findVoice { |voiceOrIndex, lang|
+	*findVoice { |voiceOrIndex, lang, default = true|
 		var voiceDict, voice;
 
 		case
@@ -129,7 +136,8 @@ Say {
 			voice = voice !? { voice.name }
 		};
 
-		^voice ? defaultVoiceName
+		if (voice.isNil and: default) { voice = defaultVoiceName };
+		^voice
 	}
 
 	*addSayEvent {
