@@ -10,7 +10,12 @@ Because the underlying commandline program, 'say', is quite different, it does n
 as a straight replacement. Rather than reimplementing Speech, it allows full access
 to the power of the 'say' program, and offers some of its options conveniently.
 
-Say is a function of the operating system and not the server. Thus, it does not generate sound on the server, and cannot be included as a sound source within other sound processes. However, one can patch system audio output to system input (by hardware of by software) and thus route Say-produced sound into the server for processing. One can also use say to render text as spoken soundfiles, and play those with buffers as full audio sources in SC.
+The Say class is a class only, so it only has class methods, and no notion of instances of Say.
+
+'say' is a function of the operating system and not the server. Thus, it does not generate sound on the server, and cannot be included as a sound source within other sound processes.
+However, there are two ways to get say-based sound into SC servers:
+1. Patching e.g. the system audio output to an audio input (by hardware of by software) and thus routing Say-produced (mono) sound into the server for processing.
+2. Using the SayBuf class to render text as spoken soundfiles, and play those with buffers as full audio sources in SC.
 
 You can try out and install voices for many languages in System Preferences/Dictation & Speech.
 
@@ -40,8 +45,7 @@ Say.allVoices.choose.cs;
 Say.voices.first.postln.say("Alex");
 ::
 
-strong:: NEW Features in Say: ::
-
+strong:: NEW Features in Say: (compared to Speech/speak) ::
 
 1. Say any object:
 code::
@@ -117,7 +121,8 @@ SayBuf.help;
 
 CLASSMETHODS::
 
-private:: initClass, getVoices, getLangs, filterVoices, addSayEvent
+private:: initClass, getVoices, getLangs, filterVoices, fillVoice, findVoice, addSayEvent
+
 
 METHOD:: voices
 the list of the available normal voices
@@ -130,19 +135,12 @@ METHOD:: allVoiceNames
 the list of names of all available voices
 
 METHOD:: fxVoices
-the list of the available fxVoices (the "funny" voices provided by Apple.)
+the list of the available fxVoices (the "funny" older voices provided by Apple.)
 METHOD:: fxVoiceNames
-the list of names of all available voices
-
-METHOD:: isValidVoice
-check whether a symbol is a valid voice name.
-
-METHOD:: at
-return the voice dict at <name>.
+the list of names of all fxVoices
 
 METHOD:: allLangs
 the list of all short lang name symbols
-
 METHOD:: allLangNames
 the list of all long langName strings
 
@@ -150,10 +148,55 @@ METHOD:: voicesByLang
 return all voices found for the given lang name in optional argVoices (or voices or allVoices).
 Say.voicesByLang(\en)
 
+METHOD:: getDefaultVoice
+get the current system voice name from macOS defaults (or nil if not set)
+METHOD:: defaultVoiceName
+get the system default voice name (cached from last call to .getDefaultVoice)
+
+METHOD:: findVoice
+find voice for given name.
+When default is true and vocie not found, replace with defaultVoice
+
+METHOD:: sayVoiceName
+say given voice name and its language symbol
+
+METHOD:: sayVoiceNames
+find and say all voice names for a language
+
+
+METHOD:: at
+return the voice dict at <name>.
+
+METHOD:: isValidVoice
+check whether a symbol is a valid voice name.
+
+METHOD:: isValidLang
+check whether a symbol is a valid language name.
+
+subsection:: Safety methods
+
+Note:: The Say program can choke when too many say commands are requested at the same time, making a system restart necessary. The code:: maxPIDs :: variable protects against this: additional say commands will be ignored (and posted).::
+
+Method:: maxPIDs
+get and set the maximum number of say commands that will be processed at the same time. A
+
+Method:: pendingPIDs
+the current number of say commands in process
+
+Note:: The say program handles rate commands a bit clumsily: rates outside the accepted range do not clip at the maximum, but fall back to normal rate! The methods code:: clipRate, minRate, maxRate:: address this.::
+
+Method:: clipRate
+get and set flag whether rate values will be clipped.
+
+Say.maxRate
+Method:: minRate, maxRate
+get and set current maximum say rates (in syllables per second).
+Default normal rate for most newer system voices is 180, minRate is 90, maxRate is 720.
+
 
 Examples::
 code::
-// PLEASE SEE TOP EXAMPLES FIRST, then here:
+// PLEASE SEE TOP EXAMPLES FIRST, then continue here:
 
 // events can wait with next bit of code until first one is finished
 // - Note that this blocks the interpreter while speaking!
