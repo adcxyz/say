@@ -1,13 +1,15 @@
 SayBuf {
-	classvar <dir, <bufs, <bufring, <>usesRoundRobin = true, <rrIndex = 0;
+	classvar <>dir, <bufs, <bufring, <>usesRoundRobin = true, <rrIndex = 0;
 	classvar <verbose = false;
 
 	*initClass {
 		dir = Platform.userAppSupportDir +/+ "saybuf";
+		//	dir = "/tmp/saybuf";    // maybe faster on some systems?
 		if (dir.pathMatch.isEmpty) {
 			"SayBuf: making SayBuf.dir.".postln;
 			File.mkdir(dir)
 		};
+
 		bufs = ();
 		this.clearDir;
 
