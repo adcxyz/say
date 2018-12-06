@@ -141,7 +141,6 @@ Say {
 	}
 
 	*addSayEvent {
-
 		Event.addEventType(\say, {
 			var str = "say", cond, pid, thisEvent;
 
