@@ -1,6 +1,6 @@
 SayBuf {
 	classvar <>dir, <bufs, <bufring, <>usesRoundRobin = true, <rrIndex = 0;
-	classvar <verbose = false;
+	classvar <>verbose = false;
 
 	*initClass {
 		dir = Platform.userAppSupportDir +/+ "saybuf";
@@ -139,8 +139,18 @@ SayBuf {
 		// will call sayEvent doneFunc when ready,
 		// which loads buffer,
 		// which calls sayEvent bufAction when ready
-		defer { sayEvent.play };
-
+		defer { sayEvent.play }; // why is this deferred?
 		^sayEvent
+	}
+}
+
++ String {
+	say2 {|voice="Alex",out=0,rate=1,amp=1.0,pan=0,wpm=180|
+		var text=this;
+		^SayBuf.prepare((text: text, voice: voice, rate: wpm),Server.default,{|b| {
+			var sig = PlayBuf.ar(1,b,BufRateScale.kr(b) * rate, doneAction: 2);
+			Pan2.ar(sig, pan, amp);
+		}.play(outbus:out);
+		} , true);
 	}
 }
