@@ -18,10 +18,21 @@ Nonetheless, there are two ways to get say-based sound into SC servers:
 
 macOS provides a wide variety of voices for many languages that you are free to install and use, see System Preferences/Accessibility/Speech.
 
-First examples:
+
+
+strong:: Example files: ::
 
 code::
 
+// An example for premaking soundfiles for a piece:
+(Say.filenameSymbol.asString.dirname.dirname +/+ "saybuf_premake.scd").openOS;
+
+// Examples for synthdefs to make for say/saybuf:
+(Say.filenameSymbol.asString.dirname.dirname +/+ "saybuf_synthdefs.scd").openOS;
+::
+
+strong:: Which voices? ::
+code::
 Say.allVoices.size; // Say finds all installed voices
 Say.fxVoiceNames; // macOS has lots of effects voices -
 Say.fxVoices.size; // which are filtered out by default, such that:
@@ -45,6 +56,12 @@ Say.fxVoiceNames.printAll;"";
 // and an example text:
 Say.allVoices.choose.cs;
 
+::
+
+
+strong:: Basic text reading methods ::
+code::
+
 // simple text reading methods
 "hi, this is the default voice speaking.".say;
 "hi, this is the first voice speaking.".say(0);
@@ -53,11 +70,11 @@ Say.allVoices.choose.cs;
 
 // each voice has a name, a language symbol, and an example text:
 v = Say.voices.choose;
-// have the voice say its example text:
+// say the example text of a specific voice:
 v.exampleText.say(v.name);
 ::
 
-strong:: NEW Features in Say: (compared to Speech/speak) ::
+strong:: NEW Features in Say : (compared to Speech/speak) ::
 
 1. .say any object:
 code::
@@ -66,6 +83,7 @@ s.say; // "localhost"
 { SinOsc.ar }.say("Anna"); // "a Function"
 { SinOsc.ar }.cs.say("Anna"); // "{ SinOsc.ar }"
 Dictionary[\a -> 1, \b -> 2].say(lang: \en);
+
 ::
 
 2. use events and patterns to create strings to be spoken :
