@@ -5,29 +5,42 @@ related:: Classes/Speech, Classes/SayBuf
 
 
 DESCRIPTION::
-Say replaces the deprecated former OSX speech synthesis used in SuperCollider, Speech.
-Because the underlying commandline program, 'say', is quite different, it does not work
-as a straight replacement. Rather than reimplementing Speech, it allows full access
-to the power of the 'say' program, and offers some of its options conveniently.
+Say replaces the deprecated OSX speech synthesis used in SuperCollider, Speech.
+Because the underlying commandline program 'say' is quite different, Say does not work
+as a straight replacement, but instead allows access to the options of the 'say' program.
 
-The Say class is a class only, so it only has class methods, and no notion of instances of Say.
+'say' is a commandline program in macOS, and thus does not generate sound on the server.
+Nonetheless, there are two ways to get say-based sound into SC servers:
 
-'say' is a function of the operating system and not the server. Thus, it does not generate sound on the server, and cannot be included as a sound source within other sound processes.
-However, there are two ways to get say-based sound into SC servers:
 1. Patching e.g. the system audio output to an audio input (by hardware of by software) and thus routing Say-produced (mono) sound into the server for processing.
+
 2. Using the SayBuf class to render text as spoken soundfiles, and play those with buffers as full audio sources in SC.
 
-You can try out and install voices for many languages in System Preferences/Dictation & Speech.
+macOS provides a wide variety of voices for many languages that you are free to install and use, see System Preferences/Accessibility/Speech.
 
 First examples:
 
 code::
-// Say finds all installed voices
-Say.allVoices.size;
-Say.fxVoices.size; // filter effects voices into here by default
-Say.voices.size; // voices just has the normal ones
+
+Say.allVoices.size; // Say finds all installed voices
+Say.fxVoiceNames; // macOS has lots of effects voices -
+Say.fxVoices.size; // which are filtered out by default, such that:
+Say.voices.size; // voices just has the newer, better sounding voices.
+Say.voiceNames.size; // voices just has the newer, better sounding voices.
+
+// to remove and add voices from Say.voices, do
+["Alex", "Kathy" ].do { |name| Say.removeVoice(name) };
+Say.voices.size;
+["Alex", "Kathy", "Bubbles" ].do { |name| Say.addVoice(name) };
+Say.voices.size;
+
+// should be two fewer now:
+Say.voices.size;
+Say.voiceNames.size;
 
 Say.allVoiceNames.printAll;"";
+Say.fxVoiceNames.printAll;"";
+
 // each voice is a dict which has a name, a language name and short symbol,
 // and an example text:
 Say.allVoices.choose.cs;
@@ -38,16 +51,15 @@ Say.allVoices.choose.cs;
 "hi, this is a voice speaking that was selected by name.".say("Alex");
 "hi, dies ist hoffentlich eine deutsche Stimme, ausgesucht durch die Sprache.".say(lang: \de);
 
-// replace uses of Speech/speak
-"hi, this is the default voice speaking.".speak;
-
 // each voice has a name, a language symbol, and an example text:
-Say.voices.first.postln.say("Alex");
+v = Say.voices.choose;
+// have the voice say its example text:
+v.exampleText.say(v.name);
 ::
 
 strong:: NEW Features in Say: (compared to Speech/speak) ::
 
-1. Say any object:
+1. .say any object:
 code::
 s.say; // "localhost"
 [1, 2, 3, 4].scramble.say(lang: \en);
@@ -56,14 +68,25 @@ s.say; // "localhost"
 Dictionary[\a -> 1, \b -> 2].say(lang: \en);
 ::
 
-2. use events to create strings to be spoken :
+2. use events and patterns to create strings to be spoken :
 code::
 (type: \say, text: "hi there, i'm talking with the default voice now").play;
 (type: \say, text: "this is a random voice", voice: Say.voices.choose.name.postln).play;
 (type: \say, text: "Anna aus Doytschland, oder Standard-stimme", voice: "Anna").play;
+
+Pbind(
+	\type, \say,
+	[\voice, \text], Pseq(
+		Say.voices.keep(10).collect { |vocdict| [vocdict.name, vocdict.exampleText].postln }
+	),
+	\wait, true
+).play;
+
+Say.killAll;
+
 ::
 
-3. access voices by languages
+3. find and access voices by languages
 code::
 // list of all short lang symbols
 Say.allLangs.postcs
@@ -75,12 +98,12 @@ Say.allLangNames.postcs
 Say.isValidLang(\en)
 Say.voicesByLang("en")
 Say.isValidLang(\en_GB) // any British speakers in da house?
-Say.voicesByLang(\en_GB) // these ones
+Say.voicesByLang(\en_GB) // if yes, these ones
 
 Say.isValidLang("pt") // alguem que fala portugues?
-Say.voicesByLang("pt").size // in my case, 3 voices
+Say.voicesByLang(\pt).size // in my case, 3 voices
 
-Say.voicesByLang("pt").collect(_.langName) // 3 in my case
+Say.voicesByLang("pt").collect(_.langName) // in my case,
 -> [ pt_BR, pt_PT, pt_BR ]  // one from portugal, 2 from brazil
 
 Say.isValidLang("pt_BR") // so brazilian portuguese is valid
@@ -175,13 +198,39 @@ check whether a symbol is a valid language name.
 
 subsection:: Safety methods
 
-Note:: The Say program can choke when too many say commands are requested at the same time, making a system restart necessary. The code:: maxPIDs :: variable protects against this: additional say commands will be ignored (and posted).::
+Note:: The Say program can choke when too many say commands are requested at the same time, making a system restart (or at least user logout/login) necessary. The code:: maxPIDs :: variable protects against this: additional say commands will be ignored (and posted).::
 
 Method:: maxPIDs
-get and set the maximum number of say commands that will be processed at the same time. A
+get and set the maximum number of say commands that will be processed at the same time.
+The default value of 10 is quite cautious; on a 2018 MacBook Pro, 32 still works fine.
+You can tune this for your system,
+code::
+Say.maxPIDs; // default of 10
+
+// slowly rise maxPIDs, run this, wait for it to say the numbers ...
+Say.maxPIDs = 16; (1..Say.maxPIDs + 5).do (_.say);
+
+// did they all finish?
+Say.pendingPIDs;
+
+// maybe you need to kill the pending ones
+Say.killAll;
+
+// now test if say has died: this should still say "alive"
+
+"alive?".say;
+
+// if this is silent, maxPIDs was set too high, and say is now stuck!
+// make a note of the highest maxPIDs value that still worked,
+// and reboot the computer.
+
+::
 
 Method:: pendingPIDs
-the current number of say commands in process
+the current number of say commands in process, used to check safety.
+code::
+Say.pendingPIDs;
+::
 
 Note:: The say program handles rate commands a bit clumsily: rates outside the accepted range do not clip at the maximum, but fall back to normal rate! The methods code:: clipRate, minRate, maxRate:: address this.::
 
@@ -191,11 +240,12 @@ get and set flag whether rate values will be clipped.
 Say.maxRate
 Method:: minRate, maxRate
 get and set current maximum say rates (in syllables per second).
-Default normal rate for most newer system voices is 180, minRate is 90, maxRate is 720.
+Default normal rate for current systems (10.11 .. 10.14) voices is 180, minRate is 90, maxRate is 720.
 
 
 Examples::
 code::
+
 // PLEASE SEE TOP EXAMPLES FIRST, then continue here:
 
 // events can wait with next bit of code until first one is finished

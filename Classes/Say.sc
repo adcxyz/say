@@ -10,16 +10,27 @@ Say {
 	classvar <clipRate = true;
 	classvar <>minRate = 90, <>maxRate = 720;
 
+	*killAll { thisProcess.platform.killAll("say") }
+
 	*initClass {
 		Platform.case(\osx,
 			{
+				fxVoiceNames = [
+					"Agnes", "Albert", "Bad", "Bahh", "Bells", "Boing",
+					"Bubbles", "Bruce", "Cellos", "Deranged", "Fred",
+					"Good", "Hysterical", "Junior", "Pipe",
+					"Princess", "Ralph", "Trinoids",
+					"Vicki", "Victoria", "Whisper", "Zarvox",
+					"NONEXISTENTVOICE_shouldBeFiltered"
+				];
+
 				Say.getVoices;
 				Say.getLangs;
 				Say.addSayEvent;
 				Say.getDefaultVoice;
 				pendingPIDs = List[];
 			}, {
-				"The Quark 'say' is currently only available on osx.".postln
+				"The Quark 'say' is only available on osx.".postln
 			}
 		);
 	}
@@ -75,17 +86,24 @@ Say {
 		}
 	}
 
-	*filterVoices {
-		fxVoiceNames = [
-			"Agnes", "Albert", "Bad", "Bahh", "Bells", "Boing",
-			"Bubbles", "Bruce", "Cellos", "Deranged", "Fred",
-			"Good", "Hysterical", "Junior", "Pipe",
-			"Princess", "Ralph", "Trinoids",
-			"Vicki", "Victoria", "Whisper", "Zarvox",
-			"NONEXISTENTVOICE_shouldBeFiltered"
-		];
-		fxVoiceNames = fxVoiceNames.select { |name| this.isValidVoice(name) };
+	*removeVoice { |name|
+		var index = voices.detectIndex { |dict| dict.name == name };
+		index !? { voices.removeAt(index) };
+		voiceNames = voices.collect(_.name);
+	}
+	*addVoice { |name|
+		var voicedict;
+		if (voices.detect { |dict| dict.name == name }.notNil) {
+			"voice % already present.\n".postf(name.cs);
+			^this
+		};
 
+		voicedict = allVoices.detect { |dict| dict.name == name };
+		voicedict !? {  voices = voices.add(voicedict) };
+		voiceNames = voices.collect(_.name);
+	}
+
+	*filterVoices { |names|
 		fxVoices = fxVoiceNames.collect { |name| this.at(name) }.select(_.notNil);
 		voices = allVoices.difference(fxVoices);
 		voiceNames = voices.collect(_.name);
