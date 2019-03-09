@@ -62,3 +62,32 @@ Pdef(\nightmare,
 	)
 ).play;
 )
+
+
+///////// for completeness, here is a test for writing files
+///////// in parallel with Say.maxPIDs as speed limit:
+/// looks good, but was not really faster in my tests.
+(
+~saydir = "~/Desktop/pipeline/".standardizePath;
+File.mkdir(~saydir);
+
+~t0 = Main.elapsedTime;
+fork {
+	var list = Object.allSubclasses.reject(_.isMetaClass).keep(120);
+	list.do { |cl, i|
+		var text = cl.name.asString;
+		var recstr = "-o %/%.aiff".format(~saydir, text);
+		"% %\n".postf(i, text);
+		while { Say.pendingPIDs.size >= Say.maxPIDs } {
+			0.02.wait;
+			// ".".postln;
+		};
+		(type: \say, text: text, lang: \en, cmds: recstr).play;
+	};
+	0.1.wait;
+	"rendering done.".say;
+	// should be same size:
+	[list.size, (~saydir +/+ "*.aiff").pathMatch.size].postln;
+	(Main.elapsedTime - ~t0).postln;
+};
+)

@@ -25,9 +25,29 @@ soundfiles recorded with Say/SayBuf.
 
 ***/
 
-/***
+/*** ///// SYNTHDEFS FOR playing with Say-Produced  BUFFERS
 
-2. pitch inflections within buffer playback:
+
+s.boot;
+x = SayBuf.prepare((type: \say, text: "pitch inflections with say..."));
+b = x.buf;
+
+////// NOTE: depending on the voice, Say-Produced soundfiles begin and end with silence.
+////// if timing is critical, these could be accounted for as offsets in the synthdefs.
+
+x.buf.plot;
+x.buf.loadToFloatArray(0, -1, { |arr| a = arr });
+
+a.detectIndex { |el, i| el.abs > 0.01 }.postln / x.buf.sampleRate;  // 0.11 sec before start
+
+a.reverse.detectIndex { |el, i| el.abs > 0.01 }.postln / x.buf.sampleRate;
+a.reverse.detectIndex { |el, i| el.abs > 0.0001 }.postln / x.buf.sampleRate; // 0.2 seconds after end
+
+
+
+
+///// 2. simple pitch inflections within buffer playback:
+
 
 - playback rate -> like tape speed
 - vibrato has rate and depth
