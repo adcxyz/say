@@ -1,4 +1,12 @@
-/***     SELECT ALL AND ENTER TO LOAD ALL SYNTHDEFS! ****
+/***
+
+This file shows possibilities of is a collection of synthdefs that manipulate
+soundfiles recorded with Say/SayBuf.
+
+
+
+*** SELECT ALL AND ENTER TO LOAD ALL SYNTHDEFS! ****
+
 
 --- Manipulating speech synthesis params with Say:
 1. rate manipulation within say soundfile preparation
@@ -9,11 +17,12 @@
 4. time-strech/compression with granular transforms
 
 ---
-1. For rate manipulation within say, use rate parameter in soundfile preparation:
-(type: \say, text: "sprechtempo 1 2 3", rate: 90).play;
-(type: \say, text: "sprechtempo 1 2 3", rate: 180).play;
-(type: \say, text: "sprechtempo 1 2 3", rate: 360).play;
-(type: \say, text: "sprechtempo 1 2 3", rate: 720).play;
+1. For speech tempo manipulation within say, use the 'wordrate' parameter in soundfile preparation:
+(type: \say, text: "tempo 1 2 3", wordrate: 90).play; // this is the minimum rate
+(type: \say, text: "tempo 1 2 3", wordrate: 180).play; // this is default rate
+(type: \say, text: "tempo 1 2 3", wordrate: 360).play; //
+(type: \say, text: "tempo 1 2 3", wordrate: 720).play; // fastest rate
+
 ***/
 
 /***
@@ -23,10 +32,6 @@
 - playback rate -> like tape speed
 - vibrato has rate and depth
 - tilt: raises start and lowers end playback rate (or vice versa)
-
-s.boot;
-x = SayBuf.prepare((type: \say, text: "pitch inflections with say..."));
-b = x.buf.bufnum;
 
 // straight:
 (instrument: \saybuf, buf: b).play;
@@ -40,19 +45,19 @@ b = x.buf.bufnum;
 
 // vibrato
 (instrument: \saybufPch, buf: b, vib: 0.0).play;
-(instrument: \saybufPch, buf: b, vib: 0.1).play;
-(instrument: \saybufPch, buf: b, vib: 0.2).play;
-(instrument: \saybufPch, buf: b, vib: 0.2, vibRate: 2).play;
+(instrument: \saybufPch, buf: b, vib: 0.1).play;   // depth
+(instrument: \saybufPch, buf: b, vib: 0.2).play;   // more depth
+(instrument: \saybufPch, buf: b, vib: 0.2, vibRate: 2).play; // vibrato rate
 (instrument: \saybufPch, buf: b, vib: 0.2, vibRate: 4).play;
 (instrument: \saybufPch, buf: b, vib: 0.2, vibRate: 8).play;
 (instrument: \saybufPch, buf: b, vib: 0.2, vibRate: 16).play;
 
 // tilt
-(instrument: \saybufPch, buf: b, tilt: -0.6).play;
+(instrument: \saybufPch, buf: b, tilt: -0.6).play; // start high and fall
 (instrument: \saybufPch, buf: b, tilt: -0.3).play;
-(instrument: \saybufPch, buf: b, tilt: -0.0).play;
-(instrument: \saybufPch, buf: b, tilt:  0.3).play;
-(instrument: \saybufPch, buf: b, tilt:  0.6).play;
+(instrument: \saybufPch, buf: b, tilt: -0.0).play; // flat
+(instrument: \saybufPch, buf: b, tilt:  0.3).play; // rising
+(instrument: \saybufPch, buf: b, tilt:  0.6).play; // rising more
 
 ***/
 
@@ -101,7 +106,7 @@ SynthDef(\saybufPch, { |out, amp = 0.1, pan, pos,
 (instrument: \saybufPchRng, buf: b, amp: 0.5, ringFreq: 50, ringMod: 0.2).play;
 (instrument: \saybufPchRng, buf: b, amp: 0.5, ringFreq: 50, ringMod: 0.5).play;
 (instrument: \saybufPchRng, buf: b, amp: 0.5, ringFreq: 50, ringMod: 0.8).play;
-(instrument: \saybufPchRng, buf: b, amp: 0.5, ringFreq: 30, ringMod: 1).play;
+(instrument: \saybufPchRng, buf: b, amp: 0.5, ringFreq: 50, ringMod: 1).play;
 
 ***/
 
@@ -150,10 +155,10 @@ g.play;
 (instrument: \saybufGrn, buf: g, amp: 0.5, speed: 0.2).play;
 
 // rate and tilt also used:
-(instrument: \saybufGrn, buf: g, amp: 0.5, tilt: 0.5).play;
-(instrument: \saybufGrn, buf: g, amp: 0.5, tilt: -0.5).play;
-(instrument: \saybufGrn, buf: g, rate: 3/2, amp: 0.5).play;
-(instrument: \saybufGrn, buf: g, rate: 2/3, amp: 0.5).play;
+(instrument: \saybufGrn, buf: g, amp: 0.5, speed: 0.5, tilt: 0.5).play;
+(instrument: \saybufGrn, buf: g, amp: 0.5, speed: 0.5, tilt: -0.5).play;
+(instrument: \saybufGrn, buf: g, rate: 3/2, speed: 0.5, amp: 0.5).play;
+(instrument: \saybufGrn, buf: g, rate: 2/3, speed: 0.5, amp: 0.5).play;
 
 // grDur sets grain duration (with fixed overlap of 2)
 (instrument: \saybufGrn, buf: g, amp: 0.5, speed: 0.5, grDur: 0.08).play;
@@ -255,8 +260,8 @@ SynthDef(\saybufGrnBpf, { |out, amp = 0.1, pan, pos,
 /**********
 
 // emphasis by envelope
-- when to put peak in 0-1 range,
-- and how much louder in dB :
+- where to put peak in time from 0 (start) to 1 (end),
+- and how much louder/softer in dB :
 Env([0, 6, 0], [0.3, 0.7]).plot;
 
 (instrument: \saybufGrnBpfEnv, buf: b, envDB: 12, envTime: 0).play; //  at start, dimin
