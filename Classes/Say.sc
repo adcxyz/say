@@ -210,4 +210,31 @@ Say {
 			}
 		});
 	}
+		// utility to write a single say event as speech soundfile
+	*write { |sayEvent, filename, filedir, action|
+		var shortText, path;
+
+		Say.fillVoice(sayEvent);
+
+		// borrow dir from SayBuf if needed
+		filedir = filedir ? SayBuf.dir;
+
+		filename ?? {
+			shortText = sayEvent.text.asString.keep(20).collect { |char| if (char.isAlphaNum, char, $_) };
+			filename = "temp_%_%.aif".format(sayEvent.voice, shortText)
+		};
+		path = (filedir +/+ filename).postcs;
+
+		sayEvent.putAll((
+			type: \say,
+			path: path,
+			filename: filename,
+			cmds: ~cmds ? "" + "-o" + quote(path),
+			doneFunc: action)
+		);
+		// defer for file write, return immediately
+		defer { sayEvent.play };
+		^sayEvent
+	}
+
 }

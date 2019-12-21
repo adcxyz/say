@@ -326,11 +326,53 @@ Task {
 
 // other options include recording to a file:
 (
-(type: \say, text: "prepare text to buffer", wait: true, cmds: "-o ~/Desktop/text.aiff").play;
+(type: \say, text: "play soundfile via finder", wait: true, cmds: "-o ~/Desktop/text.aiff").play;
 // and we used wait: true so the next action happens when done
 "~/Desktop/text.aiff".openOS;
 unixCmd("afplay" + "~/Desktop/text.aiff");
 )
+
+// Say.write is a convenience method to write to a specific folder:
+~mydir = Platform.defaultTempDir +/+ "saywrite/";
+File.mkdir(~mydir);
+~mydir.openOS;
+(
+Say.write(
+	(text: "write to folder saywrite", \lang: \en),
+	nil,
+	// "test123.aif",
+	~mydir,
+	{ "file written.".postln }
+);
+)
+
+// write a list of lines as speech soundfiles
+(
+~lines = [
+	"line 1 is looooong",
+	"line 2 not",
+	"line 3 ...",
+	"line 4 to end."
+];
+
+Task {
+	var last = ~lines.lastIndex;
+
+	~lines.do { |line, i|
+		Say.write(
+			(text: line, \lang: \en, wait: true),
+			(i + 1).asString ++ "_" ++ line ++ ".aif", // use nil for auto filename
+			~mydir,
+			{
+				".".post;
+				if (i == last) { "\ndone.".postln }
+			};
+		)
+	};
+}.play;
+)
+
+
 
 // For more examples on preparing speech buffers, see:
 SayBuf.help
