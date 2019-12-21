@@ -135,10 +135,10 @@ SayBuf {
 			sayEvent.put(\buf, buf);
 		});
 
-		// prepare by writing file here,
-		// will call sayEvent doneFunc when ready,
-		// which loads buffer,
-		// which calls sayEvent bufAction when ready
+		// sayEvent.play triggers writing to temp soundfile here;
+		// when filewrite is done, it will call sayEvent doneFunc;
+		// the doneFunc loads the file into a buffer on the server,
+		// and this calls sayEvent bufAction when buffer is ready
 		defer { sayEvent.play };
 
 		^sayEvent
