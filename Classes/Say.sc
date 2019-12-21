@@ -171,9 +171,9 @@ Say {
 			if (~voice.notNil) { str = str + "-v" + ~voice };
 
 			// support rate flag - more flags could be supported here as well
-			~rate !? {
-				if (clipRate) { ~rate = ~rate.clip(minRate, maxRate) };
-				str = str + "-r" + ~rate
+			~wordrate !? {
+				if (clipRate) { ~wordrate = ~wordrate.clip(minRate, maxRate) };
+				str = str + "-r" + ~wordrate
 			};
 			// write to file could be here:
 			~cmds !? { str = str + ~cmds };
